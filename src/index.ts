@@ -177,20 +177,64 @@ export function beforeStartService(currentOptions: ServiceOpts): StartServiceArg
         ]
       },
       {
+        handler: handlers.get_tasks_handler,
+        method: 'get' as const,
+        path: '/tasks/get',
+        validators: [
+          validators.post.validate_child_id 
+        ]
+      },  
+      {
+        handler: handlers.add_task_handler,
+        method: 'post' as const,
+        path: '/tasks/add',
+        validators: [
+          validators.post.validate_child_id,
+          validators.post.validate_subject_id,
+          validators.post.validate_completed_flag,
+          validators.post.validate_date, 
+        ]
+      },
+      {
+        handler: handlers.deactivate_task_handler,
+        method: 'post' as const,
+        path: '/tasks/deactivate',
+        validators: [
+          validators.post.validate_task_id
+        ]
+      },
+      {
+        handler: handlers.complete_task_handler,
+        method: 'post' as const,
+        path: '/tasks/complete',
+        validators: [
+          validators.post.validate_task_id
+        ]
+      },
+      {
+        handler: handlers.complete_active_tasks_handler,
+        method: 'post' as const,
+        path: '/tasks/complete_active',
+        validators: [
+          validators.post.validate_child_id
+        ]
+      },
+      {
         handler: handlers.add_review_handler,
         method: 'post' as const,
-        path: '/children/add_review',
+        path: '/reviews/add',
         validators: [
           validators.post.validate_child_id,
           validators.post.validate_date, 
           validators.post.validate_subject_id,
+          validators.post.validate_task_id,
           validators.post.validate_duration
         ]
       },
       {
         handler: handlers.get_reviews_handler,
         method: 'get' as const,
-        path: '/children/get_reviews',
+        path: '/reviews/get',
         validators: [
           validators.get.validate_child_id,
           validators.get.validate_subject_id

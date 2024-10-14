@@ -103,12 +103,29 @@ export namespace post {
 
         return 200;
     }
-
     export async function validate_duration(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext) {
         if (!context.body["duration"]) throw new sdk.NBError({
             code: 'invalid_post_request',
             httpCode: 400,
             message: 'duration is required',
+        });
+
+        return 200;
+    }
+    export async function validate_completed_flag(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext) {
+        if (!context.body["is_completed"]) throw new sdk.NBError({
+            code: 'invalid_post_request',
+            httpCode: 400,
+            message: 'is_completed is required',
+        });
+
+        return 200;
+    }
+    export async function validate_task_id(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext) {
+        if (!context.body["task_id"]) throw new sdk.NBError({
+            code: 'invalid_post_request',
+            httpCode: 400,
+            message: 'task_id is required',
         });
 
         return 200;

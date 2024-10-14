@@ -12,12 +12,12 @@ class ChildEntity implements sdk.mongo.BaseMongoEntity {
         public Reviews?: Array<string> | undefined
     ) {
     }
-    
-    _id: ObjectId; 
-    createdAt: Date; 
-    delFlg: 0 | 1; 
-    id: string; 
-    updatedAt: Date; 
+
+    _id: ObjectId;
+    createdAt: Date;
+    delFlg: 0 | 1;
+    id: string;
+    updatedAt: Date;
 }
 
 class ReviewEntity extends sdk.mongo.BaseMongoEntity {
@@ -26,7 +26,21 @@ class ReviewEntity extends sdk.mongo.BaseMongoEntity {
         public Subject?: string,
         public Child?: string,
         public hours?: string,
+        public Task?: string,
         public Asessment?: Array<string> | undefined
+    ) {
+        super();
+    }
+}
+
+class TaskEntity extends sdk.mongo.BaseMongoEntity {
+    constructor(
+        public Child?: string,
+        public date?: string,
+        public Subject?: string,
+        public isCompleted?: boolean,
+        public isActive?: boolean,
+        public Review?: string
     ) {
         super();
     }
@@ -38,7 +52,7 @@ export async function get_children_handler(logger: sdk.Logger, context: sdk.adap
 }> {
     try {
         let db = await connectDb();
-        const result = await sdk.mongo.find(logger, db, Collections.childrenCollection, { Parent: context.body["parent_id"] });
+        const result = await sdk.mongo.find(logger, db, Collections.childrenCollection, { Parent: context.query["parent_id"] });
         return {
             data: result,
             status: 200
@@ -59,12 +73,13 @@ export async function get_subjects_handler(logger: sdk.Logger, context: sdk.adap
     try {
         let db = await connectDb();
         const result = await sdk.mongo.aggregate(logger, db, Collections.subjectCollection, [
-            { $lookup:
+            {
+                $lookup:
                 {
-                   from: Collections.categoryCollection,
-                   localField: 'category_id',
-                   foreignField: 'id',
-                   as: 'category'
+                    from: Collections.categoryCollection,
+                    localField: 'category_id',
+                    foreignField: 'id',
+                    as: 'category'
                 }
             }
         ]);
@@ -119,7 +134,7 @@ export async function create_child_handler(logger: sdk.Logger, context: sdk.adap
         return {
             data: id,
             status: 200
-        };        
+        };
     } catch (e) {
         console.error(e);
         return {
@@ -132,11 +147,11 @@ export async function create_child_handler(logger: sdk.Logger, context: sdk.adap
 export async function get_reviews_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
     data: any,
     status: number
-}> {  
+}> {
     try {
         let query = {
-            Subject: context.body["subject_id"],
-            Child: context.body["child_id"]
+            Subject: context.query["subject_id"],
+            Child: context.query["child_id"]
         };
 
         let db = await connectDb();
@@ -157,13 +172,14 @@ export async function get_reviews_handler(logger: sdk.Logger, context: sdk.adapt
 export async function add_review_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
     data: any,
     status: number
-}> {   
+}> {
     try {
         const reviewObjectEntity: ReviewEntity = new ReviewEntity(
             context.body["date"],
             context.body["subject_id"],
             context.body["duration"],
             context.body["child_id"],
+            context.body["task_id"],
             undefined
         );
         
@@ -193,7 +209,169 @@ export async function add_review_handler(logger: sdk.Logger, context: sdk.adapte
         console.error(e);
         return {
             data: false,
+            status: 500
+        };
+    }
+}
+
+export async function add_task_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
+    data: any,
+    status: number
+}> {
+    try {
+        const taskEntity: TaskEntity = new TaskEntity(
+            context.body["child_id"],
+            context.body["date"],
+            context.body["subject_id"],
+            context.body["is_completed"],
+            true,
+            undefined
+        );
+
+        let db = await connectDb();
+        const id = await sdk.mongo.create(
+            logger,
+            db,
+            Collections.taskCollection,
+            taskEntity);
+
+        return {
+            data: id,
             status: 200
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            data: false,
+            status: 500
+        };
+    }
+}
+
+export async function complete_task_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
+    data: any,
+    status: number
+}> {
+    try {
+        let db = await connectDb();
+        let task_id = { id: context.body["task_id"] };
+
+        await sdk.mongo.updateMany(
+            logger,
+            db,
+            Collections.taskCollection,
+            task_id, {
+            $set: {
+                isCompleted: true
+            }
+        });
+
+        return {
+            data: task_id.id,
+            status: 200
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            data: false,
+            status: 500
+        };
+    }
+}
+
+export async function deactivate_task_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
+    data: any,
+    status: number
+}> {
+    try {
+        let db = await connectDb();
+        let task_id = { id: context.body["task_id"] };
+
+        await sdk.mongo.updateMany(
+            logger,
+            db,
+            Collections.taskCollection,
+            task_id, {
+            $set: {
+                isActive: false
+            }
+        });
+
+        return {
+            data: task_id.id,
+            status: 200
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            data: false,
+            status: 500
+        };
+    }
+}
+
+export async function complete_active_tasks_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
+    data: any,
+    status: number
+}> {
+    try {
+        let db = await connectDb();
+        let query = { Child: context.body["child_id"],
+                      isActive : true };
+
+        const number = await sdk.mongo.updateMany(
+            logger,
+            db,
+            Collections.taskCollection,
+            query, {
+            $set: {
+                isCompleted: true,
+                isActive: false
+            }
+        });
+
+        return {
+            data: number,
+            status: 200
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            data: false,
+            status: 500
+        };
+    }
+}
+
+export async function get_tasks_handler(logger: sdk.Logger, context: sdk.adapter.AdapterHandlerContext): Promise<{
+    data: any,
+    status: number
+}> {
+    try {
+        let db = await connectDb();
+        let query = { Child: context.query["child_id"] } as any;
+
+        if (context.query["is_active"])
+            query.isActive = context.body["is_active"]
+
+        if (context.query["subject_id"])
+            query.Subject = context.body["subject_id"]
+
+        const result = await sdk.mongo.find(
+            logger,
+            db,
+            Collections.taskCollection,
+            query
+        );
+        return {
+            data: result,
+            status: 200
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            data: false,
+            status: 500
         };
     }
 }

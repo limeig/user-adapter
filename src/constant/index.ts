@@ -7,4 +7,5 @@ export const childrenCollection = 'children';
 export const categoryCollection = 'category';
 export const subjectCollection = 'subjects';
 export const reviewCollection = 'review';
+export const taskCollection = 'task';
 }
